@@ -1,0 +1,53 @@
+#pragma once
+#include <cstring>
+#include <functional>
+#include <vector>
+
+template<class T, class Compare = std::less<T>>
+class priority_que {
+    static constexpr size_t root = 1;
+public:
+    using value_compare = Compare;
+    using value_type    = T;
+    using  size_type    = size_t;
+private:
+    size_type Capacity, Size;
+    value_type         *node;
+    inline bool compare(size_type u, size_type v) const {
+        static value_compare comparator;
+        return comparator(node[u],node[v]); }
+    inline void swap_nodes(size_type u, size_type v) {
+        std::swap(node[u],node[v]); }
+public:
+    inline priority_que(size_t capacity):
+        Capacity(capacity), Size(0), node(new value_type[capacity+1]) {}
+    inline priority_que(const priority_que& q):
+        Capacity(q.Capacity), Size(q.Size), node(new value_type[Capacity+1]) {
+        std::memcpy(node+root,q.node+root,Size*sizeof(value_type)); }
+    inline auto& operator=(const priority_que& q) {
+        Capacity = q.Capacity, Size = q.Size;
+        delete [] node, node = new value_type[Capacity+1];
+        std::memcpy(node+root,q.node+root,Size*sizeof(value_type));
+        return *this; }
+    inline bool      empty() const { return Size == 0; }
+    inline  size_type size() const { return Size; }
+    inline value_type  top() const { // provided that Size > 0
+        return node[root]; }
+    inline void pop() { // provided that Size > 0
+        size_type u = root, v = Size--;
+        for (node[u] = node[v]; u != v; std::swap(u,v)) {
+            const size_type l = u<<1, r = l|1;
+            if (v = u, l <= Size and compare(v,l))
+                v = l;
+            if (r <= Size and compare(v,r))
+                v = r;
+            if (v != u)
+                swap_nodes(u,v); } }
+    inline void push(value_type value) { // provided that Size < Capacity
+        size_type u = ++Size, v = u>>1;
+	    for (node[u] = value; v > 0 and compare(v,u); u = v, v >>= 1)
+            swap_nodes(u,v); }
+    inline auto operator()() const {
+        const auto base = node+root;
+        return std::vector<value_type>(base,base+Size); }
+    inline ~priority_que() { delete [] node; } };
